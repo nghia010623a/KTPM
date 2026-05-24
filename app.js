@@ -631,12 +631,12 @@ function renderDashboard() {
   const budget = calculateBudget();
 
   const cards = [
-    ["Du an", state.projects.length, `${activeProjects} dang chay`],
-    ["Cong viec", state.tasks.length, `${progress}% hoan thanh`],
-    ["Qua han", overdueTasks, "deadline tre"],
+    ["Dự án", state.projects.length, `${activeProjects} dang chay`],
+    ["Công việc", state.tasks.length, `${progress}% hoan thanh`],
+    ["Quá hạn", overdueTasks, "deadline trễ"],
     can("report:finance:view")
-      ? ["Chi phi", formatMoney(budget.spent), `${formatMoney(budget.budget)} ngan sach`]
-      : ["Tai nguyen", `${resourceUsage}%`, "muc su dung"],
+      ? ["Chi phí", formatMoney(budget.spent), `${formatMoney(budget.budget)} ngan sach`]
+      : ["Tài nguyên", `${resourceUsage}%`, "muc su dung"],
   ];
 
   dom.summaryCards.innerHTML = cards
@@ -707,11 +707,11 @@ function renderProjects() {
       <thead>
         <tr>
           <th>Ma</th>
-          <th>Du an</th>
-          <th>Trang thai</th>
-          <th>Tien do</th>
-          <th>Bat dau</th>
-          <th>Ket thuc</th>
+          <th>Dự án</th>
+          <th>Trạng thái</th>
+          <th>Tiến độ</th>
+          <th>Bắt đầu</th>
+          <th>Kết thúc</th>
           ${budgetHeaders}
           <th></th>
         </tr>
@@ -751,7 +751,7 @@ function renderProjects() {
                   `,
                 )
                 .join("")
-            : `<tr><td colspan="${showBudget ? 9 : 7}">${emptyState("Khong co du an phu hop.")}</td></tr>`
+            : `<tr><td colspan="${showBudget ? 9 : 7}">${emptyState("Không có dự án phù hợp.")}</td></tr>`
         }
       </tbody>
     </table>
@@ -834,10 +834,10 @@ function renderResources() {
   const totalCost = resources.reduce((sum, resource) => sum + toNumber(resource.totalCost), 0);
 
   const cards = [
-    ["Nhan su", personnel, "nguoi"],
-    ["Thiet bi", equipment, "thiet bi"],
-    ["Su dung", `${usage}%`, "allocated"],
-    can("resource:finance:view") ? ["Chi phi", formatMoney(totalCost), "tong"] : ["Ngan sach", "An", "khong co quyen"],
+    ["Nhân sự", personnel, "người"],
+    ["Thiết bị", equipment, "thiết bị"],
+    ["Sử dụng", `${usage}%`, "allocated"],
+    can("resource:finance:view") ? ["Chi phí", formatMoney(totalCost), "tong"] : ["Ngân sách", "An", "không có quyền"],
   ];
 
   dom.resourceCards.innerHTML = cards
@@ -853,7 +853,7 @@ function renderResources() {
     .join("");
 
   const showFinance = can("resource:finance:view");
-  const financeHeaders = showFinance ? "<th>Don gia</th><th>Tong chi phi</th>" : "";
+  const financeHeaders = showFinance ? "<th>Don gia</th><th>Tổng chi phí</th>" : "";
   const financeCells = (resource) =>
     showFinance
       ? `<td class="money">${formatMoney(resource.unitCost)}</td><td class="money">${formatMoney(resource.totalCost)}</td>`
@@ -863,12 +863,12 @@ function renderResources() {
     <table>
       <thead>
         <tr>
-          <th>Loai</th>
-          <th>Ten</th>
-          <th>Du an</th>
-          <th>Cap phat</th>
-          <th>Da dung</th>
-          <th>Trang thai</th>
+          <th>Loại</th>
+          <th>Tên</th>
+          <th>Dự án</th>
+          <th>Cấp phát</th>
+          <th>Đã dùng</th>
+          <th>Trạng thái</th>
           ${financeHeaders}
           <th></th>
         </tr>
@@ -889,8 +889,8 @@ function renderResources() {
                       ${financeCells(resource)}
                       <td>
                         <div class="row-actions">
-                          ${can("resource:update") ? actionButton("edit-resource", resource.id, "pencil", "Sua") : ""}
-                          ${can("resource:delete") ? actionButton("delete-resource", resource.id, "trash-2", "Xoa", "danger") : ""}
+                          ${can("resource:update") ? actionButton("edit-resource", resource.id, "pencil", "Sửa") : ""}
+                          ${can("resource:delete") ? actionButton("delete-resource", resource.id, "trash-2", "Xoá", "danger") : ""}
                         </div>
                       </td>
                     </tr>
@@ -943,7 +943,7 @@ function renderReports() {
   if (can("report:resource:view")) {
     panels.push(`
       <section class="panel">
-        <div class="panel-head"><h3>Tai nguyen</h3>${statusBadge(`${calculateResourceUsage(resources)}%`, "warn")}</div>
+        <div class="panel-head"><h3>Tài nguyên</h3>${statusBadge(`${calculateResourceUsage(resources)}%`, "warn")}</div>
         <div class="compact-list">
           ${["PERSONNEL", "EQUIPMENT", "BUDGET"]
             .map((type) => {
@@ -973,9 +973,9 @@ function renderReports() {
       <section class="panel">
         <div class="panel-head"><h3>Chi phi</h3>${statusBadge(formatMoney(budget.spent), "muted")}</div>
         <div class="compact-list">
-          <article class="compact-item"><strong>Ngan sach</strong><small>${formatMoney(budget.budget)}</small></article>
-          <article class="compact-item"><strong>Da dung</strong><small>${formatMoney(budget.spent)}</small></article>
-          <article class="compact-item"><strong>Con lai</strong><small>${formatMoney(budget.budget - budget.spent)}</small></article>
+          <article class="compact-item"><strong>Ngân sách</strong><small>${formatMoney(budget.budget)}</small></article>
+          <article class="compact-item"><strong>Đã dùng</strong><small>${formatMoney(budget.spent)}</small></article>
+          <article class="compact-item"><strong>Còn lại</strong><small>${formatMoney(budget.budget - budget.spent)}</small></article>
         </div>
       </section>
     `);
@@ -1028,8 +1028,8 @@ function renderAccessMatrix() {
     <table>
       <thead>
         <tr>
-          <th>Nhom</th>
-          <th>Quyen</th>
+          <th>Nhóm</th>
+          <th>Quyền</th>
           ${ROLES.map((role) => `<th>${escapeHtml(role)}</th>`).join("")}
         </tr>
       </thead>
@@ -1189,7 +1189,7 @@ function projectForm(project, canEditBudget) {
       </label>
       ${
         canEditBudget
-          ? `<label>Ngan sach<input name="budget" type="number" min="0" step="1000" value="${escapeHtml(p.budget ?? "")}" /></label>`
+          ? `<label>Ngân sách<input name="budget" type="number" min="0" step="1000" value="${escapeHtml(p.budget ?? "")}" /></label>`
           : `<input name="budget" type="hidden" value="${escapeHtml(p.budget ?? "")}" />`
       }
     </div>
@@ -1203,7 +1203,7 @@ function openTaskDialog(task = null) {
     guard("task:create");
   }
 
-  openDialog(task ? "Sua cong viec" : "Tao cong viec", taskForm(task), async (form) => {
+  openDialog(task ? "Sửa công việc" : "Tạo công việc", taskForm(task), async (form) => {
     const type = textValue(form, "type");
     if (!canUseTaskType(type)) {
       throw new Error(`Role ${state.role} khong duoc tao/sua loai ${type}.`);
@@ -1225,10 +1225,10 @@ function openTaskDialog(task = null) {
 
     if (task) {
       await apiFetch(`${ENDPOINTS.tasks}/${encodeURIComponent(task.id)}`, { method: "PUT", body: payload });
-      toast("Da sua cong viec.");
+      toast("Đã sửa công việc.");
     } else {
       await apiFetch(ENDPOINTS.tasks, { method: "POST", body: payload });
-      toast("Da tao cong viec.");
+      toast("Đã tạo công việc.");
     }
   });
 }
