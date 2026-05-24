@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Management System</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <section id="authScreen" class="auth-screen">
+      <div class="auth-panel">
+        <div>
+          <p class="eyebrow">Project Management System</p>
+          <h1>Quản lý dự án phần mềm</h1>
+        </div>
+
+        <form id="loginForm" class="stack">
+          <label>
+            API Base URL
+            <input id="apiBaseInput" name="apiBaseUrl" type="url" placeholder="http://localhost:8080/api" required />
+          </label>
+          <div class="field-grid">
+            <label>
+              Tên đăng nhập
+              <input name="username" type="text" autocomplete="username" required />
+            </label>
+            <label>
+              Mật khẩu
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+          </div>
+          <button class="primary-btn" type="submit">
+            <i data-lucide="log-in"></i>
+            Đăng nhập
+          </button>
+        </form>
+
+        <div class="divider"><span>hoac JWT co san</span></div>
+
+        <form id="tokenForm" class="stack">
+          <label>
+            JWT
+            <textarea id="tokenInput" rows="4" placeholder="Paste access token co claim role"></textarea>
+          </label>
+          <button class="secondary-btn" type="submit">
+            <i data-lucide="key-round"></i>
+            Dung token
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <div id="appShell" class="app-shell" hidden>
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">PM</div>
+          <div>
+            <strong>PMS</strong>
+            <small id="roleBadge">GUEST</small>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Dieu huong">
+          <button class="nav-item is-active" data-view="dashboard" data-permission="dashboard:view">
+            <i data-lucide="layout-dashboard"></i>
+            Tổng quan
+          </button>
+          <button class="nav-item" data-view="projects" data-permission="project:view">
+            <i data-lucide="folder-kanban"></i>
+            Dự án
+          </button>
+          <button class="nav-item" data-view="tasks" data-permission="task:view">
+            <i data-lucide="list-checks"></i>
+            Công việc
+          </button>
+          <button class="nav-item" data-view="resources" data-permission="resource:view">
+            <i data-lucide="boxes"></i>
+            Tài nguyên
+          </button>
+          <button class="nav-item" data-view="reports" data-permission="report:view">
+            <i data-lucide="chart-no-axes-column"></i>
+            Báo cáo
+          </button>
+          <button class="nav-item" data-view="notifications" data-permission="notification:view">
+            <i data-lucide="bell-ring"></i>
+            Thông báo
+          </button>
+          <button class="nav-item" data-view="access" data-permission="access:view">
+            <i data-lucide="shield-check"></i>
+            Phân quyền
+          </button>
+          <button class="nav-item" data-view="settings" data-permission="settings:view">
+            <i data-lucide="settings"></i>
+            Cấu hình
+          </button>
+        </nav>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="activeApiLabel">API</p>
+            <h2 id="pageTitle">Tổng quan</h2>
+          </div>
+          <div class="topbar-actions">
+            <span id="socketStatus" class="status-pill muted">WS off</span>
+            <span id="userBadge" class="user-badge"></span>
+            <button id="refreshBtn" class="icon-btn" type="button" title="Tai lai">
+              <i data-lucide="refresh-cw"></i>
+            </button>
+            <button id="logoutBtn" class="icon-btn danger" type="button" title="Dang xuat">
+              <i data-lucide="log-out"></i>
+            </button>
+          </div>
+        </header>
+
+        <main class="content">
+          <section id="dashboardView" class="view is-visible" data-view-panel="dashboard">
+            <div id="summaryCards" class="summary-grid"></div>
+            <div class="content-grid">
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Tiến độ dự án</h3>
+                </div>
+                <div id="projectProgressList" class="progress-list"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <h3>Deadline gán</h3>
+                </div>
+                <div id="deadlineList" class="compact-list"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="projectsView" class="view" data-view-panel="projects">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <input id="projectSearch" class="search-input" type="search" placeholder="Tim du an" />
+                <select id="projectStatusFilter">
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="PLANNING">PLANNING</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="ON_HOLD">ON_HOLD</option>
+                  <option value="DONE">DONE</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
+              <button id="newProjectBtn" class="primary-btn" type="button" data-permission="project:create">
+                <i data-lucide="folder-plus"></i>
+                Tạo dự án
+              </button>
+            </div>
+            <div id="projectsTable" class="table-wrap"></div>
+          </section>
+
+          <section id="tasksView" class="view" data-view-panel="tasks">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <select id="taskProjectFilter"></select>
+                <select id="taskStatusFilter">
+                  <option value="ALL">Tất cả công việc</option>
+                  <option value="TODO">TODO</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="REVIEW">REVIEW</option>
+                  <option value="TESTING">TESTING</option>
+                  <option value="DONE">DONE</option>
+                  <option value="BLOCKED">BLOCKED</option>
+                </select>
+              </div>
+              <button id="newTaskBtn" class="primary-btn" type="button" data-permission="task:create">
+                <i data-lucide="plus-circle"></i>
+                Tạo công việc
+              </button>
+            </div>
+            <div id="taskBoard" class="task-board"></div>
+          </section>
+
+          <section id="resourcesView" class="view" data-view-panel="resources">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <select id="resourceProjectFilter"></select>
+                <select id="resourceTypeFilter">
+                  <option value="ALL">Tất cả tài nguyên</option>
+                  <option value="PERSONNEL">Nhân sự</option>
+                  <option value="EQUIPMENT">Thiết bị</option>
+                  <option value="BUDGET">Ngân sách</option>
+                </select>
+              </div>
+              <button id="newResourceBtn" class="primary-btn" type="button" data-permission="resource:create">
+                <i data-lucide="package-plus"></i>
+                Thêm tài nguyên
+              </button>
+            </div>
+            <div id="resourceCards" class="summary-grid"></div>
+            <div id="resourcesTable" class="table-wrap"></div>
+          </section>
+
+          <section id="reportsView" class="view" data-view-panel="reports">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <select id="reportProjectFilter"></select>
+              </div>
+              <button id="exportReportBtn" class="secondary-btn" type="button" data-permission="report:export">
+                <i data-lucide="download"></i>
+                Export CSV
+              </button>
+            </div>
+            <div id="reportContent" class="report-grid"></div>
+          </section>
+
+          <section id="notificationsView" class="view" data-view-panel="notifications">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <select id="notificationFilter">
+                  <option value="ALL">Tất cả thông báo</option>
+                  <option value="UNREAD">Chưa đọc</option>
+                  <option value="READ">Đã đọc</option>
+                </select>
+              </div>
+              <button id="markAllReadBtn" class="secondary-btn" type="button" data-permission="notification:update">
+                <i data-lucide="check-check"></i>
+                Đã đọc tất cả
+              </button>
+            </div>
+            <div id="notificationList" class="notification-list"></div>
+          </section>
+
+          <section id="accessView" class="view" data-view-panel="access">
+            <div id="accessMatrix" class="table-wrap"></div>
+          </section>
+
+          <section id="settingsView" class="view" data-view-panel="settings">
+            <form id="settingsForm" class="settings-grid">
+              <label>
+                API Base URL
+                <input id="settingsApiBase" name="apiBaseUrl" type="url" required />
+              </label>
+              <label>
+                WebSocket URL
+                <input id="settingsWsUrl" name="wsUrl" type="text" required />
+              </label>
+              <label>
+                WebSocket mode
+                <select id="settingsWsMode" name="wsMode">
+                  <option value="native">Native WebSocket</option>
+                  <option value="stomp">STOMP/SockJS</option>
+                </select>
+              </label>
+              <button class="primary-btn" type="submit">
+                <i data-lucide="save"></i>
+                Luu cau hinh
+              </button>
+            </form>
+            <div id="endpointTable" class="table-wrap"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <dialog id="entityDialog" class="dialog">
+      <form id="dialogForm" method="dialog">
+        <div class="dialog-head">
+          <h3 id="dialogTitle"></h3>
+          <button class="icon-btn" value="cancel" type="button" id="closeDialogBtn" title="Dong">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div id="dialogBody" class="dialog-body"></div>
+        <div class="dialog-actions">
+          <button class="secondary-btn" type="button" id="cancelDialogBtn">Huy</button>
+          <button class="primary-btn" type="submit">
+            <i data-lucide="save"></i>
+            Luu
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toastHost" class="toast-host" aria-live="polite"></div>
+  </body>
+</html>
